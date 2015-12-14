@@ -50,7 +50,7 @@ def vk_auth(driver, username, password):
 
 
 def get_filtered_exchange_page(driver, from_size):
-    url = 'https://vk.com/exchange?act=community_search&sort=size&r=1&size={}'.format(from_size)
+    url = 'https://vk.com/exchange?act=community_search&sort=size&r=1&size={0}'.format(from_size)
 
     driver.get(url)
     # Scroll page to the end doesn't update page for PhantomJS driver (works for Firefox)
@@ -77,7 +77,7 @@ def get_filtered_exchange_page(driver, from_size):
 
         showmore_btn.click()
         updated_len = len(driver.page_source)
-        logging.debug('Updated page length: {}'.format(updated_len))
+        logging.debug('Updated page length: {0}'.format(updated_len))
 
     
     assert(updated_len == current_len)
@@ -121,7 +121,7 @@ def parse_exchange_page(page):
                                     category=category, size=size, coverage=coverage, \
                                     coverage_day=coverage_day, price=price)
                 except Exception as e:
-                    logging.error('public_id: {}, name: {}, size: {}, price: {}'.\
+                    logging.error('public_id: {0}, name: {1}, size: {2}, price: {3}'.\
                                   format(public_id, name, size, price))
                     raise e
 
@@ -138,7 +138,7 @@ def collect_exchange(driver):
     while not reached_the_end:
         page, reached_the_end = get_filtered_exchange_page(driver, from_size)
         from_size, were_new = parse_exchange_page(page)
-        logging.debug('Were new: {}, from_size: {}'.format(were_new, from_size))
+        logging.debug('Were new: {0}, from_size: {1}'.format(were_new, from_size))
 
 
 def main():
