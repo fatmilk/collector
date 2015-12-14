@@ -15,7 +15,9 @@ function make_venv() {
 }
 
 function install_packages() {
-    # sudo apt install python2.7-dev
+    sudo apt install python2.7-dev \
+        libxslt-dev libxml2-dev
+
     npm install -g phantomjs
 
     for package in $PACKAGES; do

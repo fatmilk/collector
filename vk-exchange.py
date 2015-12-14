@@ -18,6 +18,8 @@ import re
 from pony.orm import db_session
 from db import vkExchangeDB, Public
 
+PAGELOAD_TIMEOUT = 10
+
 
 def vk_auth(driver, username, password):
 
@@ -28,20 +30,18 @@ def vk_auth(driver, username, password):
 
     logging.debug(driver.execute_script("return navigator.userAgent"))
 
-    #assert "authcheck_code" in driver.page_source
-    WebDriverWait(driver, 10).until(
+    WebDriverWait(driver, PAGELOAD_TIMEOUT).until(
         EC.presence_of_element_located((By.ID, "authcheck_code"))
     )
-    #except:
-    #    print("Not finished waiting")
-    #    print(driver.page_source)
-    #    driver.save_screenshot('screen-fail.png')
 
     confirm_elem = driver.find_element_by_id('authcheck_code')
 
     print("Enter confirmation code: ")
     confirm_code = sys.stdin.readline()
     confirm_elem.send_keys(confirm_code, Keys.RETURN)
+    WebDriverWait(driver, PAGELOAD_TIMEOUT).until(
+        EC.presence_of_element_located((By.ID, 'main_feed'))
+    )
 
 
 def get_filtered_exchange_page(driver, from_size):
@@ -58,7 +58,7 @@ def get_filtered_exchange_page(driver, from_size):
         current_len = updated_len
         try:
             logging.getLogger("selenium").setLevel(logging.CRITICAL)
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, PAGELOAD_TIMEOUT).until(
                 EC.visibility_of_element_located((By.XPATH, "//tr[@id='exchange_more_results']/td/a"))
             )
             showmore_btn = driver.find_element_by_xpath("//tr[@id='exchange_more_results']/td/a")
