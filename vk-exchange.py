@@ -83,13 +83,9 @@ def parse_exchange_page(page):
     data = lxml.html.document_fromstring(page)
     public_names = data.xpath('//a[@class="exchange_ad_post_stats"]')
     
-    def scrape_number(lxml_iter):
-        num = ''
-        for i in lxml_iter:
-            if i.strip():
-                num += i.strip()
+    def text2int(text):
         try:
-            return int(num)
+            return int(text.replace(' ', ''))
         except:
             return 0
         
@@ -106,17 +102,20 @@ def parse_exchange_page(page):
                 cur_path = cur_path.getnext().getnext()
                 category = cur_path.text
                 cur_path = cur_path.getparent().getnext()
-                size = scrape_number(cur_path.xpath('b')[0].itertext())
+                size = text2int(cur_path.xpath('b')[0].text_content())
                 cur_path = cur_path.getnext()
-                #coverage
+                coverage2 = cur_path.xpath('b')[0].text_content()
+                coverage, coverage_day = map(text2int, coverage2.split('/'))
                 cur_path = cur_path.getnext()
-                price = scrape_number(cur_path.xpath('b')[0].itertext())
+                price = text2int(cur_path.xpath('b')[0].itertext())
 
                 try:
-                    public = Public(club_id=club_id, public_id=public_id, name=name, category=category, \
-                                    size=size, price=price)
+                    public = Public(club_id=club_id, public_id=public_id, name=name, \
+                                    category=category, size=size, coverage=coverage, \
+                                    coverage_day=coverage_day, price=price)
                 except Exception as e:
-                    logging.error('public_id: {}, name: {}, size: {}, price: {}'.format(public_id, name, size, price))
+                    logging.error('public_id: {}, name: {}, size: {}, price: {}'.\
+                                  format(public_id, name, size, price))
                     raise e
 
                 were_new = True
@@ -166,6 +165,7 @@ def main():
         logging.info('Autorization passed')
         json.dump(cookies, open(args.cksfile, 'w'))
 
+    logging.info('Collecting VK exchange info...')
     collect_exchange(driver)
     logging.info('Exchange collected')
 
