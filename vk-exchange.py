@@ -163,7 +163,7 @@ def main():
         vk_auth_info = json.load(open(args.authfile))
         vk_auth(driver, vk_auth_info['username'], vk_auth_info['password'])
         logging.info('Autorization passed')
-        json.dump(cookies, open(args.cksfile, 'w'))
+        json.dump(driver.get_cookies(), open(args.cksfile, 'w'))
 
     logging.info('Collecting VK exchange info...')
     collect_exchange(driver)

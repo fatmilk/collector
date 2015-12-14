@@ -1,3 +1,4 @@
 .vkauth
 vkcookies.json
 *.pyc
+venv/
