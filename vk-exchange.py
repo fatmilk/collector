@@ -13,6 +13,7 @@ import json
 import logging
 import lxml.html
 import argparse
+import re
 
 from pony.orm import db_session
 from db import vkExchangeDB, Public
@@ -80,7 +81,7 @@ def get_filtered_exchange_page(driver, from_size):
 
 def parse_exchange_page(page):
     data = lxml.html.document_fromstring(page)
-    public_names = data.xpath('//a[@class="exchange_comm_name"]')
+    public_names = data.xpath('//a[@class="exchange_ad_post_stats"]')
     
     def scrape_number(lxml_iter):
         num = ''
@@ -96,11 +97,13 @@ def parse_exchange_page(page):
     were_new = False
     with db_session:
         for public_name in public_names:
-            public_id = public_name.attrib['href'].lstrip('/')
-            public = Public.get(public_id=public_id)
+            club_id = re.search('stats-(\d+)*', public_name.attrib['onclick']).group(1)
+            public = Public.get(club_id=club_id)
             if public == None:
-                name = public_name.text if public_name.text else 'Noname'
-                cur_path = public_name.getnext().getnext()
+                cur_path = public_name.getparent().getnext()
+                public_id = cur_path.attrib['href'].lstrip('/')
+                name = cur_path.text if public_name.text else 'Noname'
+                cur_path = cur_path.getnext().getnext()
                 category = cur_path.text
                 cur_path = cur_path.getparent().getnext()
                 size = scrape_number(cur_path.xpath('b')[0].itertext())
@@ -110,7 +113,7 @@ def parse_exchange_page(page):
                 price = scrape_number(cur_path.xpath('b')[0].itertext())
 
                 try:
-                    public = Public(public_id=public_id, name=name, category=category, \
+                    public = Public(club_id=club_id, public_id=public_id, name=name, category=category, \
                                     size=size, price=price)
                 except Exception as e:
                     logging.error('public_id: {}, name: {}, size: {}, price: {}'.format(public_id, name, size, price))

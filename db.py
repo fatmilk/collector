@@ -4,8 +4,8 @@ from pony.orm import *
 
 vkExchangeDB = Database()
 class Public(vkExchangeDB.Entity):
+    club_id = Required(str, unique=True)
     public_id = Required(str, unique=True)
-    club_id = Optional(str, unique=True)
     name = Required(str)
     category = Optional(str)
     size = Required(int)
