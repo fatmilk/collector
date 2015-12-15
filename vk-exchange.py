@@ -98,7 +98,7 @@ def parse_exchange_page(page):
             if public == None:
                 cur_path = public_name.getparent().getnext()
                 public_id = cur_path.attrib['href'].lstrip('/')
-                name = cur_path.text if public_name.text else 'Noname'
+                name = cur_path.text if cur_path.text else 'Noname'
                 cur_path = cur_path.getnext().getnext()
                 category = cur_path.text
                 cur_path = cur_path.getparent().getnext()
@@ -107,7 +107,7 @@ def parse_exchange_page(page):
                 coverage2 = cur_path.xpath('b')[0].text_content()
                 coverage, coverage_day = map(text2int, coverage2.split('/'))
                 cur_path = cur_path.getnext()
-                price = text2int(cur_path.xpath('b')[0].itertext())
+                price = text2int(cur_path.xpath('b')[0].text_content())
 
                 try:
                     public = Public(club_id=club_id, public_id=public_id, name=name, \
