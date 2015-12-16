@@ -6,6 +6,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
 
 import sys
 import time
@@ -19,7 +21,10 @@ from pony.orm import db_session
 from db import vkExchangeDB, Public
 
 PAGELOAD_TIMEOUT = 10
-
+USER_AGENT = (
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_4) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/29.0.1547.57 Safari/537.36'
+)
 
 def vk_auth(driver, username, password):
 
@@ -148,7 +153,10 @@ def main():
     vkExchangeDB.generate_mapping(create_tables=True)
 
     #driver = selenium.webdriver.Firefox()
-    driver = selenium.webdriver.PhantomJS()
+    #driver = selenium.webdriver.PhantomJS()
+    dcap = dict(DesiredCapabilities.PHANTOMJS)
+    dcap["phantomjs.page.settings.userAgent"] = USER_AGENT
+    driver = selenium.webdriver.PhantomJS(desired_capabilities=dcap)
 
     # We have to navigate to VK page before setting cookies
     # (PhantomJS' feature, see https://github.com/detro/ghostdriver/issues/178)
