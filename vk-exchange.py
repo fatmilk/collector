@@ -18,7 +18,7 @@ import argparse
 import re
 
 from pony.orm import db_session
-from db import vkExchangeDB, Public
+from db import exchangeDB, Public
 
 PAGELOAD_TIMEOUT = 10
 USER_AGENT = (
@@ -85,6 +85,8 @@ def get_filtered_exchange_page(driver, from_size):
 
 
 def parse_exchange_page(page):
+    logging.debug('Parsing exchange page')
+
     data = lxml.html.document_fromstring(page)
     public_names = data.xpath('//a[@class="exchange_ad_post_stats"]')
     
@@ -149,8 +151,8 @@ def main():
     parser.add_argument("--authfile", type=str, default='.vkauth', help="Path to cookies file")
     args = parser.parse_args()
 
-    vkExchangeDB.bind('sqlite', args.dbfile, create_db=True)
-    vkExchangeDB.generate_mapping(create_tables=True)
+    exchangeDB.bind('sqlite', args.dbfile, create_db=True)
+    exchangeDB.generate_mapping(create_tables=True)
 
     #driver = selenium.webdriver.Firefox()
     #driver = selenium.webdriver.PhantomJS()

@@ -18,7 +18,7 @@ import argparse
 import re
 
 from pony.orm import db_session
-from db import vkExchangeDB, Public
+from db import exchangeDB, Public
 
 PAGELOAD_TIMEOUT = 10
 USER_AGENT = (
@@ -27,14 +27,13 @@ USER_AGENT = (
 )
 
 
-def get_exchange_page(driver):
-    url = 'https://sociate.ru/spots/view/?ordering=users_asc&provider=vkontakte&blogger=all&min_age=0&min_geo=0'
+def get_filtered_exchange_page(driver, from_size):
+    url = 'https://sociate.ru/spots/view/?ordering=users_asc&provider=vkontakte&min_users={}'.format(from_size)
 
     driver.get(url)
     # Scroll page to the end doesn't update page for PhantomJS driver (works for Firefox)
     #selenium.webdriver.common.action_chains.ActionChains(driver).send_keys(Keys.END).perform()
     
-    reached_the_end = False
     current_len = 0
     updated_len = 1
     while updated_len != current_len:
@@ -49,7 +48,6 @@ def get_exchange_page(driver):
         except (selenium.common.exceptions.TimeoutException, \
             selenium.common.exceptions.NoSuchElementException):
             logging.debug('Reach the end of exchange list')
-            reached_the_end = True
             break
         finally:
             logging.getLogger("selenium").setLevel(logging.WARNING)
@@ -60,46 +58,36 @@ def get_exchange_page(driver):
 
     
     assert(updated_len == current_len)
-    return driver.page_source, reached_the_end
+    return driver.page_source
 
 
 def parse_exchange_page(page):
+    logging.debug('Parsing exchange page')
+
     data = lxml.html.document_fromstring(page)
-    public_names = data.xpath('//a[@class="exchange_ad_post_stats"]')
+    rows = data.xpath('//div[contains(@class, "row main-row-w")]')
     
-    def text2int(text):
-        try:
-            return int(text.replace(' ', ''))
-        except:
-            return 0
-        
     last_size = 0
     were_new = False
     with db_session:
-        for public_name in public_names:
-            club_id = re.search('stats-(\d+)*', public_name.attrib['onclick']).group(1)
+        for row in rows:
+            club = row.getchildren()[0].xpath('.//a')[0]
+            club_id = re.search('club(\d+)*', club.attrib['href']).group(1)
             public = Public.get(club_id=club_id)
             if public == None:
-                cur_path = public_name.getparent().getnext()
-                public_id = cur_path.attrib['href'].lstrip('/')
-                name = cur_path.text if cur_path.text else 'Noname'
-                cur_path = cur_path.getnext().getnext()
-                category = cur_path.text
-                cur_path = cur_path.getparent().getnext()
-                size = text2int(cur_path.xpath('b')[0].text_content())
-                cur_path = cur_path.getnext()
-                coverage2 = cur_path.xpath('b')[0].text_content()
-                coverage, coverage_day = map(text2int, coverage2.split('/'))
-                cur_path = cur_path.getnext()
-                price = text2int(cur_path.xpath('b')[0].text_content())
+                name = club.text_content().strip()
+                if not name: name = 'Noname'
+                price = int(re.sub("[^0-9]", "",
+                                   row.xpath('.//span[contains(@class, "js_placement_price")]')[0].text_content()))
+                size, coverage = map(lambda x: int(re.sub("[^0-9]", "", x.text_content())), row.xpath('.//span[@class="num"]'))
 
                 try:
-                    public = Public(club_id=club_id, public_id=public_id, name=name, \
-                                    category=category, size=size, coverage=coverage, \
-                                    coverage_day=coverage_day, price=price)
+                    public = Public(club_id=club_id, name=name, \
+                                    size=size, coverage=coverage, \
+                                    price=price)
                 except Exception as e:
-                    logging.error('public_id: {}, name: {}, size: {}, price: {}'.\
-                                  format(public_id, name, size, price))
+                    logging.error('club_id: {}, name: {}, size: {}, price: {}'.\
+                                  format(club_id, name, size, price))
                     raise e
 
                 were_new = True
@@ -110,21 +98,26 @@ def parse_exchange_page(page):
     
 
 def collect_exchange(driver):
-    page, reached_the_end = get_exchange_page(driver)
-    #were_new = parse_exchange_page(page)
-    #logging.debug('Were new: {}'.format(were_new, from_size))
+    from_size = 0
+    reached_the_end = False
+    while not reached_the_end:
+        page = get_filtered_exchange_page(driver, from_size)
+        last_size, were_new = parse_exchange_page(page)
+        reached_the_end = (last_size == from_size)
+        from_size = last_size
+        logging.debug('Were new: {}, last_size: {}'.format(were_new, last_size))
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.getLogger("selenium").setLevel(logging.WARNING)
 
-    parser = argparse.ArgumentParser(description="VK exchange collector")
-    parser.add_argument("--dbfile", type=str, default='vkexch.sqlite', help="Path to sqlite DB file")
+    parser = argparse.ArgumentParser(description="Sociate exchange collector")
+    parser.add_argument("--dbfile", type=str, default='scexch.sqlite', help="Path to sqlite DB file")
     args = parser.parse_args()
 
-    #vkExchangeDB.bind('sqlite', args.dbfile, create_db=True)
-    #vkExchangeDB.generate_mapping(create_tables=True)
+    exchangeDB.bind('sqlite', args.dbfile, create_db=True)
+    exchangeDB.generate_mapping(create_tables=True)
 
     #driver = selenium.webdriver.Firefox()
     #driver = selenium.webdriver.PhantomJS()
