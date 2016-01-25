@@ -1,12 +1,12 @@
 #!/bin/bash -eux
 
 VENV_DIR=`pwd`/venv
+PIP=$VENV_DIR/bin/pip
 PACKAGES='
     pony
     selenium
     lxml
 '
-
 
 function make_venv() {
     mkdir $VENV_DIR
@@ -15,18 +15,22 @@ function make_venv() {
 }
 
 function install_packages() {
-    sudo apt install python2.7-dev \
+    sudo apt install python2.7-dev libssl-dev \
         libxslt-dev libxml2-dev
 
-    npm install -g phantomjs
+    sudo apt install libpython2.7-stdlib
+
+    # use ./.node_modules/.bin in $PATH for phantomjs
+    #npm install phantomjs
 
     for package in $PACKAGES; do
-        pip install $package
+        $PIP install $package
     done
 }
 
 
 [ -e $VENV_DIR ] || make_venv
-source $VENV_DIR/bin/activate
 install_packages
-deactivate
+
+#source $VENV_DIR/bin/activate
+#deactivate
