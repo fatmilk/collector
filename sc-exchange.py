@@ -25,7 +25,7 @@ USER_AGENT = (
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_4) AppleWebKit/537.36 ' +
     '(KHTML, like Gecko) Chrome/29.0.1547.57 Safari/537.36'
 )
-
+MAX_LOAD_MORE_ITERS = 20
 
 def get_filtered_exchange_page(driver, from_size):
     url = 'https://sociate.ru/spots/view/?ordering=users_asc&provider=vkontakte&min_users={}'.format(from_size)
@@ -36,8 +36,10 @@ def get_filtered_exchange_page(driver, from_size):
     
     current_len = 0
     updated_len = 1
-    while updated_len != current_len:
+    num_iters = 0
+    while updated_len != current_len and num_iters < MAX_LOAD_MORE_ITERS:
         current_len = updated_len
+        num_iters += 1
         try:
             logging.getLogger("selenium").setLevel(logging.CRITICAL)
             WebDriverWait(driver, PAGELOAD_TIMEOUT).until(
@@ -47,7 +49,7 @@ def get_filtered_exchange_page(driver, from_size):
             time.sleep(10)
         except (selenium.common.exceptions.TimeoutException, \
             selenium.common.exceptions.NoSuchElementException):
-            logging.debug('Reach the end of exchange list')
+            logging.debug('Reached the end of exchange list')
             break
         finally:
             logging.getLogger("selenium").setLevel(logging.WARNING)
@@ -57,7 +59,6 @@ def get_filtered_exchange_page(driver, from_size):
         logging.debug('Updated page length: {}'.format(updated_len))
 
     
-    assert(updated_len == current_len)
     return driver.page_source
 
 
